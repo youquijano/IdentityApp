@@ -75,7 +75,12 @@ namespace Api.Controllers
                 return BadRequest(result.Errors);
             }
 
-            return Ok("Your account has been created, you can now login.");
+            //return Ok("Your account has been created, you can now login.");
+            return Ok(
+                new JsonResult(
+                    new { title = "Account Created", message = "Your account has been created, you can now login" }
+                    )
+                );
 
         }
 
