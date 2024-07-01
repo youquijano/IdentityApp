@@ -7,6 +7,7 @@ import { User } from '../shared/models/account/user';
 import { ReplaySubject, map, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { ConfirmEmail } from '../shared/models/account/confirmEmail';
+import { ResetPassword } from '../shared/models/account/resetPassword';
 
 @Injectable({
   providedIn: 'root'
@@ -33,7 +34,11 @@ export class AccountService {
   }
 
   forgotUsernameOrPassword(email: string){ 
-    return this._http.put(`${environment.appUrl}/api/account/reset-password/${email}`, {});
+    return this._http.post(`${environment.appUrl}/api/account/forgot-username-or-password/${email}`, {});
+  }
+
+  resetPassword(model : ResetPassword){
+    return this._http.put(`${environment.appUrl}/api/account/reset-password`, model);
   }
 
   refreshUser(jwt : string | null){

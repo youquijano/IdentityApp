@@ -5,6 +5,7 @@ import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
 import { ConfirmEmailComponent } from './confirm-email/confirm-email.component';
 import { SendEmailComponent } from './send-email/send-email.component';
+import { ResetPasswordComponent } from './reset-password/reset-password.component';
 
 const routes : Routes = [
   {
@@ -18,6 +19,9 @@ const routes : Routes = [
   },
   {
     path: 'send-email/:mode', component : SendEmailComponent
+  },
+  {
+    path: 'reset-password', component : ResetPasswordComponent
   }
 ]
 
