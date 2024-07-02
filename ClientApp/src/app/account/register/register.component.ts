@@ -6,6 +6,8 @@ import { Router } from '@angular/router';
 import { take } from 'rxjs';
 import { User } from '../../shared/models/account/user';
 
+declare const FB: any;
+
 @Component({
   selector: 'app-register',
   templateUrl: './register.component.html',
@@ -69,6 +71,19 @@ export class RegisterComponent implements OnInit{
     }
 
     //console.log(this.registerForm.value);
+  }
+
+  registerWithFacebook(){
+    FB.login(async (fbResult:any) =>{
+      //console.log(fbResult);
+      if(fbResult.authResponse){
+        const accessToken = fbResult.authResponse.accessToken;
+        const userId = fbResult.authResponse.userID;
+        this.router.navigateByUrl(`/account/register/third-party/facebook?access_token=${accessToken}&userId=${userId}`);
+      } else {
+        this.sharedService.showNotification(false, "Failed","Unable to register with your facebook");
+      }
+    })
   }
 
 }

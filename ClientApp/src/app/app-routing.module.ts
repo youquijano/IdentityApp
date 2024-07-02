@@ -4,6 +4,7 @@ import { HomeComponent } from './home/home.component';
 import { NotFoundComponent } from './shared/components/errors/not-found/not-found.component';
 import { PlayComponent } from './play/play.component';
 import { AuthorizationGuard } from './shared/guards/authorization.guard';
+import { FormsModule } from '@angular/forms';
 
 const routes: Routes = [
   {
@@ -16,12 +17,11 @@ const routes: Routes = [
     children : [
       {path: 'play', component: PlayComponent}
     ]
-  },
-  //{path : 'play', component: PlayComponent},
-  //implement lady loading by the following format
+  },  
   {
     path:'account', loadChildren: () => import('./account/account.module').then(module => module.AccountModule)
   },
+  
   {
     path : 'not-found', component: NotFoundComponent
   },

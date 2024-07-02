@@ -4,7 +4,7 @@
             <a class="nav-brand" >
                 <img src="./assets/images/logo.png" class="me-3" alt="logo">
             </a>
-            <button class="navbar-toggler" type="button">
+            <button class="navbar-toggler" type="button" >
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse">
@@ -12,9 +12,12 @@
                     <li class="nav-item">
                         <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Home</a>    
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" routerLink="/play" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Play</a>    
-                    </li>
+                    <ng-container *ngIf="accountService.user$ | async">
+                        <li class="nav-item">
+                            <a class="nav-link" routerLink="/play" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Play</a>    
+                        </li>
+                    </ng-container>
+                    
                 </ul>
                 <ul class="navbar-nav" *ngIf="(accountService.user$ | async) === null">
                     <li class="nav-item">

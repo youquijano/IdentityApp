@@ -27,7 +27,7 @@ import { JwtInterceptor } from './shared/interceptors/jwt.interceptor';
     BrowserAnimationsModule
   ],
   providers: [
-    provideClientHydration(),
+    //provideClientHydration(),
     {
       provide: HTTP_INTERCEPTORS,
       useClass: JwtInterceptor,

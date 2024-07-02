@@ -62,7 +62,7 @@ export class SendEmailComponent implements OnInit {
     if (this.emailForm.valid && this.mode) {
       if (this.mode.includes('resend-email-confirmation-link')) {
         this.accountService
-          .resendEmailConfirmationLink(this.emailForm.get('email').value)
+          .resendEmailConfirmationLink(this.emailForm.get('email')?.value)
           .subscribe({
             next: (response: any) => {
               this.sharedService.showNotification(
@@ -82,7 +82,7 @@ export class SendEmailComponent implements OnInit {
           });
       } else if (this.mode.includes('forgot-username-or-password')) {
         this.accountService
-          .forgotUsernameOrPassword(this.emailForm.get('email').value)
+          .forgotUsernameOrPassword(this.emailForm.get('email')?.value)
           .subscribe({
             next: (response: any) => {
               this.sharedService.showNotification(

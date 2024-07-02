@@ -8,41 +8,65 @@ import { ReplaySubject, map, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { ConfirmEmail } from '../shared/models/account/confirmEmail';
 import { ResetPassword } from '../shared/models/account/resetPassword';
+import { RegisterWithExternal } from '../shared/models/account/registerWithExternal';
+import { LoginWithExternal } from '../shared/models/account/loginWithExternal';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AccountService {
-
   private userSource = new ReplaySubject<User | null>(1);
   user$ = this.userSource.asObservable();
 
-  constructor(private _http : HttpClient,
-    private router: Router
-  ) { }
+  constructor(private _http: HttpClient, private router: Router) {}
 
-  register(model : Register){
+  register(model: Register) {
     return this._http.post(`${environment.appUrl}/api/account/register`, model);
   }
 
-  confirmEmail(model : ConfirmEmail){
-    return this._http.put(`${environment.appUrl}/api/account/confirm-email`, model);
+  registerWithThirdParty(model: RegisterWithExternal) {
+    return this._http.post<User>(
+      `${environment.appUrl}/api/account/register-with-third-party`,
+      model
+    ).pipe(
+      map((user: User) => {
+        if (user) {
+          this.setUser(user);          
+        }        
+      })
+    );
   }
 
-  resendEmailConfirmationLink(email: string){
-    return this._http.post(`${environment.appUrl}/api/account/resend-email-confirmation-link/${email}`, {});
+  confirmEmail(model: ConfirmEmail) {
+    return this._http.put(
+      `${environment.appUrl}/api/account/confirm-email`,
+      model
+    );
   }
 
-  forgotUsernameOrPassword(email: string){ 
-    return this._http.post(`${environment.appUrl}/api/account/forgot-username-or-password/${email}`, {});
+  resendEmailConfirmationLink(email: string) {
+    return this._http.post(
+      `${environment.appUrl}/api/account/resend-email-confirmation-link/${email}`,
+      {}
+    );
   }
 
-  resetPassword(model : ResetPassword){
-    return this._http.put(`${environment.appUrl}/api/account/reset-password`, model);
+  forgotUsernameOrPassword(email: string) {
+    return this._http.post(
+      `${environment.appUrl}/api/account/forgot-username-or-password/${email}`,
+      {}
+    );
   }
 
-  refreshUser(jwt : string | null){
-    if(jwt === null){
+  resetPassword(model: ResetPassword) {
+    return this._http.put(
+      `${environment.appUrl}/api/account/reset-password`,
+      model
+    );
+  }
+
+  refreshUser(jwt: string | null) {
+    if (jwt === null) {
       this.userSource.next(null);
       return of(undefined);
     }
@@ -50,38 +74,54 @@ export class AccountService {
     let headers = new HttpHeaders();
     headers = headers.set('Authorization', 'Bearer ' + jwt);
 
-    return this._http.get<User>(`${environment.appUrl}/api/account/refresh-user-token`, {headers}).pipe(      
-      map((user:User) => {
-        if(user) {
-          this.setUser(user);
-        }        
+    return this._http
+      .get<User>(`${environment.appUrl}/api/account/refresh-user-token`, {
+        headers,
       })
-    );
+      .pipe(
+        map((user: User) => {
+          if (user) {
+            this.setUser(user);
+          }
+        })
+      );
   }
 
-  login(model : Login){
-    return this._http.post<User>(`${environment.appUrl}/api/account/login`, model).pipe(
-      map((user:User) => {
+  login(model: Login) {
+    return this._http
+      .post<User>(`${environment.appUrl}/api/account/login`, model)
+      .pipe(
+        map((user: User) => {
+          if (user) {
+            this.setUser(user);
+            //return user;
+          }
+          //return null;
+        })
+      );
+  }
+
+  loginWithThirdParty(model : LoginWithExternal){
+    return this._http.post<User>(`${environment.appUrl}/api/account/login-with-third-party`, model).pipe(
+      map((user : User) => {
         if(user){
           this.setUser(user);
-          //return user;
         }
-        //return null;
       })
     );
   }
 
-  logout(){
+  logout() {
     localStorage.removeItem(environment.userKey);
     this.userSource.next(null);
     this.router.navigateByUrl('/');
   }
 
-  getJwt(){
-    if(typeof window !== 'undefined' && window.localStorage){
+  getJwt() {
+    if (typeof window !== 'undefined' && window.localStorage) {
       const key = localStorage.getItem(environment.userKey);
-      if(key){
-        const user : User = JSON.parse(key);
+      if (key) {
+        const user: User = JSON.parse(key);
         return user.jwt;
       } else {
         return null;
@@ -90,12 +130,12 @@ export class AccountService {
     return null;
   }
 
-  private setUser(user : User) {
+  private setUser(user: User) {
     localStorage.setItem(environment.userKey, JSON.stringify(user));
     this.userSource.next(user);
 
     // this.user$.subscribe({
-    //   next: response => 
+    //   next: response =>
     //     console.log(response)
     // });
   }

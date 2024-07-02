@@ -3,9 +3,10 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
-import { ConfirmEmailComponent } from './confirm-email/confirm-email.component';
 import { SendEmailComponent } from './send-email/send-email.component';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
+import { RegisterWithThirdPartyComponent } from './register-with-third-party/register-with-third-party.component';
+import { ConfirmEmailBakComponent } from './confirm-email-bak/confirm-email-bak.component';
 
 const routes : Routes = [
   {
@@ -15,13 +16,16 @@ const routes : Routes = [
     path: 'register', component : RegisterComponent
   },
   {
-    path: 'confirm-email', component : ConfirmEmailComponent
+    path: 'confirm-email', component : ConfirmEmailBakComponent
   },
   {
     path: 'send-email/:mode', component : SendEmailComponent
   },
   {
     path: 'reset-password', component : ResetPasswordComponent
+  },
+  {
+    path: 'register/third-party/:provider', component : RegisterWithThirdPartyComponent
   }
 ]
 
