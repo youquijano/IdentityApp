@@ -1,6 +1,7 @@
 ﻿using Api.DTOs.Account;
 using Api.Models;
 using Api.Service;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.VisualBasic;
 using System;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -175,7 +177,17 @@ namespace Api.Controllers
             }
             else if (model.Provider.Equals(SD.Google))
             {
-
+                try
+                {
+                    if (!GoogleValidatedAsync(model.AccessToken, model.UserId).GetAwaiter().GetResult())
+                    {
+                        return Unauthorized("Unable to register with google");
+                    }
+                }
+                catch (Exception e)
+                {
+                    return Unauthorized();                    
+                }
             }
             else
             {
@@ -398,6 +410,34 @@ namespace Api.Controllers
             {
                 return true;
             }
+        }
+
+        private async Task<bool> GoogleValidatedAsync(string accessToken, string userId)
+        {
+            var payload = await GoogleJsonWebSignature.ValidateAsync(accessToken);
+            if (!payload.Audience.Equals(configuration["Google:ClientId"]))
+            {
+                return false;
+            }
+
+            if(!payload.Issuer.Equals("accounts.google.com") && !payload.Issuer.Equals("https://accounts.google.com"))
+            {
+                return false;
+            }
+
+            if(payload.ExpirationTimeSeconds == null)
+            {
+                return false;
+            }
+
+            DateTime now = DateTime.Now.ToUniversalTime();
+            DateTime expiration = DateTimeOffset.FromUnixTimeSeconds((long)payload.ExpirationTimeSeconds).DateTime;
+            if(now > expiration) { return false; }
+
+            if(!payload.Subject.Equals(userId)) { return false; }
+
+            return true;
+            
         }
         #endregion
     }

@@ -1,11 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, Inject, OnInit, Renderer2, ViewChild } from '@angular/core';
 import { AccountService } from '../account.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { SharedService } from '../../shared/shared.service';
 import { Router } from '@angular/router';
 import { take } from 'rxjs';
 import { User } from '../../shared/models/account/user';
-
+import { CredentialResponse } from 'google-one-tap';
+import { jwtDecode } from 'jwt-decode';
+import { DOCUMENT } from '@angular/common';
 declare const FB: any;
 
 @Component({
@@ -14,15 +16,18 @@ declare const FB: any;
   styleUrl: './register.component.css'
 })
 export class RegisterComponent implements OnInit{
-
+  @ViewChild('googleButton', {static : true}) googleButton : ElementRef = new ElementRef({});
   registerForm : FormGroup = new FormGroup({});
   submitted = false;
   errorMessages : string[] = [];
 
+
   constructor( private accountService : AccountService,
     private formBuilder : FormBuilder,
     private sharedService : SharedService,
-    private router : Router
+    private router : Router,
+    private _render2 : Renderer2,
+    @Inject(DOCUMENT) private _document: Document
   ) {
     this.accountService.user$.pipe(take(1)).subscribe({
       next : (user : User | null) => {
@@ -34,7 +39,17 @@ export class RegisterComponent implements OnInit{
   }
 
   ngOnInit(): void {
+    this.initializeGoogleButton();
     this.initializeForm();
+  }
+
+  ngAfterViewInit() {
+    const script1 = this._render2.createElement('script');
+    script1.src = 'https://accounts.google.com/gsi/client';
+    script1.async = 'true';
+    script1.defer = 'true';
+    this._render2.appendChild(this._document.body, script1);
+
   }
 
   initializeForm(){
@@ -84,6 +99,36 @@ export class RegisterComponent implements OnInit{
         this.sharedService.showNotification(false, "Failed","Unable to register with your facebook");
       }
     })
+  }
+
+  private initializeGoogleButton(){
+    if(typeof window === "undefined") { console.log("window is not defined"); }
+    (window as any).onGoogleLibraryLoad = () => {
+      // @ts-ignore
+      google.accounts.id.initialize({
+        client_id : '867331117312-hm9o6p5qous20gtpvjvls22hippih4r5.apps.googleusercontent.com',
+        callback : this.googleCallBack.bind(this),
+        auto_select : false,
+        cancel_on_tap_outside : true
+      });
+
+      // @ts-ignore
+      google.accounts.id.renderButton(
+        this.googleButton.nativeElement,
+        {
+          size: 'medium', 
+          shape: 'rectangular',
+          text: 'signup_with',
+          logo_alignment : 'center'
+        }
+      );
+    }
+  }
+
+  private googleCallBack(response: CredentialResponse){
+    //console.log(response);
+    const decodedToken : any = jwtDecode(response.credential);
+    this.router.navigateByUrl(`/account/register/third-party/google?access_token=${response.credential}&userId=${decodedToken.sub}`);
   }
 
 }
