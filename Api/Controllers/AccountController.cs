@@ -86,13 +86,22 @@ namespace Api.Controllers
                 }
                 catch (Exception e)
                 {
-
                     return Unauthorized();
                 }
             }
             else if (model.Provider.Equals(SD.Google))
             {
-
+                try
+                {
+                    if (!GoogleValidatedAsync(model.AccessToken, model.UserId).GetAwaiter().GetResult())
+                    {
+                        return Unauthorized("Unable to login with Google");
+                    }
+                }
+                catch (Exception e)
+                {
+                    return Unauthorized("Unable to login with Google");
+                }
             }
             else
             {
@@ -186,7 +195,7 @@ namespace Api.Controllers
                 }
                 catch (Exception e)
                 {
-                    return Unauthorized();                    
+                    return Unauthorized();
                 }
             }
             else
@@ -195,7 +204,7 @@ namespace Api.Controllers
             }
 
             var user = await userManager.FindByNameAsync(model.UserId);
-            
+
             if (user != null)
             {
                 return BadRequest(string.Format("You have an account already. Please login with your {0}", model.Provider));
@@ -209,9 +218,9 @@ namespace Api.Controllers
                 Provider = model.Provider,
             };
 
-            var result= await userManager.CreateAsync(userToAdd);
+            var result = await userManager.CreateAsync(userToAdd);
 
-            if(!result.Succeeded) { return BadRequest(result.Errors); }
+            if (!result.Succeeded) { return BadRequest(result.Errors); }
 
             return CreateApplicationUserDto(userToAdd);
         }
@@ -420,24 +429,24 @@ namespace Api.Controllers
                 return false;
             }
 
-            if(!payload.Issuer.Equals("accounts.google.com") && !payload.Issuer.Equals("https://accounts.google.com"))
+            if (!payload.Issuer.Equals("accounts.google.com") && !payload.Issuer.Equals("https://accounts.google.com"))
             {
                 return false;
             }
 
-            if(payload.ExpirationTimeSeconds == null)
+            if (payload.ExpirationTimeSeconds == null)
             {
                 return false;
             }
 
             DateTime now = DateTime.Now.ToUniversalTime();
             DateTime expiration = DateTimeOffset.FromUnixTimeSeconds((long)payload.ExpirationTimeSeconds).DateTime;
-            if(now > expiration) { return false; }
+            if (now > expiration) { return false; }
 
-            if(!payload.Subject.Equals(userId)) { return false; }
+            if (!payload.Subject.Equals(userId)) { return false; }
 
             return true;
-            
+
         }
         #endregion
     }
