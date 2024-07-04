@@ -53,7 +53,7 @@ namespace Api.Controllers
         public async Task<ActionResult<UserDto>> RefreshUserToken()
         {
             var user = await userManager.FindByNameAsync(User.FindFirst(ClaimTypes.Email)?.Value);
-            return CreateApplicationUserDto(user);
+            return await CreateApplicationUserDto(user);
         }
 
         [HttpPost("Login")]
@@ -69,7 +69,7 @@ namespace Api.Controllers
 
             if (!result.Succeeded) return Unauthorized("Invalid username or password");
 
-            return CreateApplicationUserDto(user);
+            return await CreateApplicationUserDto(user);
         }
 
         [HttpPost("login-with-third-party")]
@@ -111,7 +111,7 @@ namespace Api.Controllers
             var user = await userManager.Users.FirstOrDefaultAsync(x => x.UserName == model.UserId && x.Provider == model.Provider);
             if (user == null) return Unauthorized("Unable to find your account");
 
-            return CreateApplicationUserDto(user);
+            return await CreateApplicationUserDto(user);
         }
 
         [HttpPost("Register")]
@@ -222,7 +222,7 @@ namespace Api.Controllers
 
             if (!result.Succeeded) { return BadRequest(result.Errors); }
 
-            return CreateApplicationUserDto(userToAdd);
+            return await CreateApplicationUserDto(userToAdd);
         }
 
         [HttpPut("confirm-email")]
@@ -353,13 +353,13 @@ namespace Api.Controllers
         }
 
         #region Private Helper Method
-        private UserDto CreateApplicationUserDto(User user)
+        private async Task<UserDto> CreateApplicationUserDto(User user)
         {
             return new UserDto
             {
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                JWT = jWTService.CreateJWT(user)
+                JWT = await jWTService.CreateJWT(user)
             };
         }
 
