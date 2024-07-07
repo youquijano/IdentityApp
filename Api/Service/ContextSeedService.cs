@@ -41,7 +41,7 @@ namespace Api.Service
 
             if (!userManager.Users.AnyAsync().GetAwaiter().GetResult())
             {
-                var admin = new User { FirstName = "admin", LastName = "jackson", UserName= "admin@example.com", Email="admin@example.com", EmailConfirmed = true };
+                var admin = new User { FirstName = "admin", LastName = "jackson", UserName= SD.AdminUserName, Email= SD.AdminUserName, EmailConfirmed = true };
                 await userManager.CreateAsync(admin, "123456");
                 await userManager.AddToRolesAsync(admin, new[] { SD.AdminRole, SD.ManagerRole, SD.PlayerRole });
                 await userManager.AddClaimsAsync(admin, 

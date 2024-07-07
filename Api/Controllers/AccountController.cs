@@ -67,7 +67,28 @@ namespace Api.Controllers
 
             var result = await signInManager.CheckPasswordSignInAsync(user, model.Password, false);
 
-            if (!result.Succeeded) return Unauthorized("Invalid username or password");
+            if (result.IsLockedOut) return Unauthorized(string.Format("Your account has been locked. You should wait until {0} (UTC time) to be able to login", user.LockoutEnd));
+
+            if (!result.Succeeded)
+            {
+                //user input an invalid password
+                if (!user.UserName.Equals(SD.AdminUserName))
+                {
+                    await userManager.AccessFailedAsync(user);
+                }
+                if (user.AccessFailedCount >= SD.MaximumLoginAttemp)
+                {
+                    //lock user for one day
+                    await userManager.SetLockoutEndDateAsync(user, DateTime.UtcNow.AddDays(1));
+                    return Unauthorized(string.Format("Your account has been locked. You should wait until {0} (UTC time) to be able to login", user.LockoutEnd));
+                }
+
+                return Unauthorized("Invalid username or password");
+            }
+
+            //user inputs a correct password
+            await userManager.ResetAccessFailedCountAsync(user);
+            await userManager.SetLockoutEndDateAsync(user, null);
 
             return await CreateApplicationUserDto(user);
         }
@@ -138,14 +159,15 @@ namespace Api.Controllers
                 return BadRequest(result.Errors);
             }
 
+            await userManager.AddToRoleAsync(userToAdd, SD.PlayerRole);
+
             //return Ok("Your account has been created, you can now login.");
 
             try
             {
                 if (await SendConfirmEmailAsync(userToAdd))
                 {
-                    return Ok(
-                        new JsonResult(
+                    return Ok(new JsonResult(
                             new { title = "Account Created", message = "Your account has been created, please confirm your email address" }
                             )
                         );
@@ -221,6 +243,7 @@ namespace Api.Controllers
             var result = await userManager.CreateAsync(userToAdd);
 
             if (!result.Succeeded) { return BadRequest(result.Errors); }
+            await userManager.AddToRoleAsync(userToAdd, SD.PlayerRole);
 
             return await CreateApplicationUserDto(userToAdd);
         }
