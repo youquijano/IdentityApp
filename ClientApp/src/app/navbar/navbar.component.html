@@ -4,10 +4,10 @@
             <a class="nav-brand" >
                 <img src="./assets/images/logo.png" class="me-3" alt="logo">
             </a>
-            <button class="navbar-toggler" type="button" >
+            <button class="navbar-toggler" type="button" (click)="toggleCollapsed()">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse">
+            <div class="collapse navbar-collapse" [ngClass]="{'collapse' : collapsed}">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Home</a>    
@@ -15,6 +15,9 @@
                     <ng-container *ngIf="accountService.user$ | async">
                         <li class="nav-item">
                             <a class="nav-link" routerLink="/play" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Play</a>    
+                        </li>
+                        <li class="nav-item" *appUserHasRole="['Admin', 'Manager']">
+                            <a class="nav-link" routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Admin</a>    
                         </li>
                     </ng-container>
                     

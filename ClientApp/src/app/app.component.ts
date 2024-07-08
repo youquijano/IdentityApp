@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AccountService } from './account/account.service';
+import { SharedService } from './shared/shared.service';
 
 @Component({
   selector: 'app-root',
@@ -9,7 +10,9 @@ import { AccountService } from './account/account.service';
 
 export class AppComponent implements OnInit{  
 
-  constructor(private accountService : AccountService) {}
+  constructor(private accountService : AccountService,
+    private sharedService : SharedService
+  ) {}
   
   ngOnInit(): void {
     this.refreshUser();
@@ -21,8 +24,10 @@ export class AppComponent implements OnInit{
       this.accountService.refreshUser(jwt).subscribe(
         {
           next : _ => {},
-          error : _ => {
+          error : error => {
+            
             this.accountService.logout();
+            this.sharedService.showNotification(false, 'Account blocked', error.error);
           }
         }
       );

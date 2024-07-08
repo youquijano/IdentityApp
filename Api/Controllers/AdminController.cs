@@ -36,6 +36,7 @@ namespace Api.Controllers
                 .Select(member => new MemberViewDto
                 {
                     Id = member.Id,
+                    FirstName = member.FirstName,
                     UserName = member.UserName,
                     LastName = member.LastName,
                     DateCreated = member.DateCreated,

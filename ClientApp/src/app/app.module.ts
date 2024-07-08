@@ -11,6 +11,7 @@ import { SharedModule } from './shared/shared.module';
 import { PlayComponent } from './play/play.component';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { JwtInterceptor } from './shared/interceptors/jwt.interceptor';
+import { AdminModule } from './admin/admin.module';
 
 @NgModule({
   declarations: [
@@ -24,7 +25,7 @@ import { JwtInterceptor } from './shared/interceptors/jwt.interceptor';
     BrowserModule,
     AppRoutingModule,
     SharedModule,
-    BrowserAnimationsModule
+    BrowserAnimationsModule    
   ],
   providers: [
     //provideClientHydration(),
