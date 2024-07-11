@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Host, HostListener, OnInit } from '@angular/core';
 import { AccountService } from './account/account.service';
 import { SharedService } from './shared/shared.service';
+import { take } from 'rxjs';
+import { User } from './shared/models/account/user';
 
 @Component({
   selector: 'app-root',
@@ -15,7 +17,23 @@ export class AppComponent implements OnInit{
   ) {}
   
   ngOnInit(): void {
+    //this.sharedService.openExpirySessionCountdown();
     this.refreshUser();
+  }
+
+
+  @HostListener('window:keydown')
+  @HostListener('window:mousedown')
+  checkUserActivity(){
+    this.accountService.user$.pipe(take(1)).subscribe({
+      next: (user : User | null) => {
+        if(user){
+          console.log('user is active');
+          clearTimeout(this.accountService.timeoutId);
+          this.accountService.checkUserIdleTimeout();
+        }
+      }
+    })
   }
 
   private refreshUser(){

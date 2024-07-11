@@ -1,36 +1,52 @@
-import { Directive, Input, OnInit, TemplateRef, ViewContainerRef } from '@angular/core';
+import {
+  Directive,
+  Input,
+  OnInit,
+  TemplateRef,
+  ViewContainerRef,
+} from '@angular/core';
 import { AccountService } from '../../account/account.service';
 import { take } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
 
 @Directive({
-  selector: '[appUserHasRole]'
+  selector: '[appUserHasRole]',
 })
 export class UserHasRoleDirective implements OnInit {
-
-  @Input() appUserHasRole : string[] = [];
+  @Input() appUserHasRole: string[] = [];
 
   constructor(
-    private viewContainerRef : ViewContainerRef,
-    private templateRef : TemplateRef<any>,
-    private accountService : AccountService
-  ) { }
+    private viewContainerRef: ViewContainerRef,
+    private templateRef: TemplateRef<any>,
+    private accountService: AccountService
+  ) {}
 
   ngOnInit(): void {
     this.accountService.user$.pipe(take(1)).subscribe({
-      next : user => {
-        if(user) {
-          const decodedToken : any = jwtDecode(user.jwt);
-          if(decodedToken.role.some((role:any) => this.appUserHasRole.includes(role))) {
-            this.viewContainerRef.createEmbeddedView(this.templateRef);
+      next: (user) => {
+        if (user) {
+          const decodedToken: any = jwtDecode(user.jwt);
+          if (Array.isArray(decodedToken.role)) {
+            if (
+              decodedToken.role.some((role: any) =>
+                this.appUserHasRole.includes(role)
+              )
+            ) {
+              this.viewContainerRef.createEmbeddedView(this.templateRef);
+            } else {
+              this.viewContainerRef.clear();
+            }
           } else {
-            this.viewContainerRef.clear();
+            if(this.appUserHasRole.includes(decodedToken.role)){
+              this.viewContainerRef.createEmbeddedView(this.templateRef);
+            } else {
+              this.viewContainerRef.clear();
+            }
           }
         } else {
           this.viewContainerRef.clear();
         }
-      }
-    })
+      },
+    });
   }
-
 }

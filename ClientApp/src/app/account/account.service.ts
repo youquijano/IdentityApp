@@ -4,12 +4,14 @@ import { Register } from '../shared/models/account/register';
 import { environment } from '../../environments/environment.development';
 import { Login } from '../shared/models/account/login';
 import { User } from '../shared/models/account/user';
-import { ReplaySubject, map, of } from 'rxjs';
+import { ReplaySubject, map, of, take } from 'rxjs';
 import { Router } from '@angular/router';
 import { ConfirmEmail } from '../shared/models/account/confirmEmail';
 import { ResetPassword } from '../shared/models/account/resetPassword';
 import { RegisterWithExternal } from '../shared/models/account/registerWithExternal';
 import { LoginWithExternal } from '../shared/models/account/loginWithExternal';
+import { jwtDecode } from 'jwt-decode';
+import { SharedService } from '../shared/shared.service';
 
 @Injectable({
   providedIn: 'root',
@@ -17,11 +19,30 @@ import { LoginWithExternal } from '../shared/models/account/loginWithExternal';
 export class AccountService {
   private userSource = new ReplaySubject<User | null>(1);
   user$ = this.userSource.asObservable();
+  refreshTokenTimeout : any;
+  timeoutId : any;
 
-  constructor(private _http: HttpClient, private router: Router) {}
+  constructor(private _http: HttpClient, private router: Router,
+    private sharedService : SharedService
+  ) {}
 
   register(model: Register) {
     return this._http.post(`${environment.appUrl}/api/account/register`, model);
+  }
+
+  refreshToken = async () => {
+    this._http.post<User>(`${environment.appUrl}/api/account/refresh-token`, {}, {withCredentials:true})
+    .subscribe({
+      next: (user : User) => {
+        if(user){
+          this.setUser(user);
+        }
+      }, error : error => {
+        this.sharedService.showNotification(false, "Error", error.error);
+        this.logout();
+      }
+    })
+
   }
 
   registerWithThirdParty(model: RegisterWithExternal) {
@@ -75,8 +96,8 @@ export class AccountService {
     headers = headers.set('Authorization', 'Bearer ' + jwt);
 
     return this._http
-      .get<User>(`${environment.appUrl}/api/account/refresh-user-token`, {
-        headers,
+      .get<User>(`${environment.appUrl}/api/account/refresh-page`, {
+        headers,withCredentials:true
       })
       .pipe(
         map((user: User) => {
@@ -89,7 +110,7 @@ export class AccountService {
 
   login(model: Login) {
     return this._http
-      .post<User>(`${environment.appUrl}/api/account/login`, model)
+      .post<User>(`${environment.appUrl}/api/account/login`, model, {withCredentials:true})
       .pipe(
         map((user: User) => {
           if (user) {
@@ -102,7 +123,7 @@ export class AccountService {
   }
 
   loginWithThirdParty(model : LoginWithExternal){
-    return this._http.post<User>(`${environment.appUrl}/api/account/login-with-third-party`, model).pipe(
+    return this._http.post<User>(`${environment.appUrl}/api/account/login-with-third-party`, model, {withCredentials:true}).pipe(
       map((user : User) => {
         if(user){
           this.setUser(user);
@@ -113,8 +134,11 @@ export class AccountService {
 
   logout() {
     localStorage.removeItem(environment.userKey);
+    this.sharedService.displayExpiringSessionModal =false;
+    clearTimeout(this.timeoutId);
     this.userSource.next(null);
     this.router.navigateByUrl('/');
+    this.stopRefreshTokenTimer();
   }
 
   getJwt() {
@@ -130,13 +154,52 @@ export class AccountService {
     return null;
   }
 
+  checkUserIdleTimeout(){
+    this.user$.pipe(take(1)).subscribe({
+      next : (user : User | null) => {
+        //the user is logged in
+        if(user){
+          //if not currently displaying expiring session modal
+          if(!this.sharedService.displayExpiringSessionModal){
+            this.timeoutId = setTimeout(() => {
+              this.sharedService.displayExpiringSessionModal = true;
+              this.sharedService.openExpirySessionCountdown();
+              // in 10 minutes of user inactivity
+            }, 10 * 1000);
+          }
+        }
+      }
+    });
+  }
+
   private setUser(user: User) {
+    this.stopRefreshTokenTimer();
+    this.startRefreshTokenTimer(user.jwt);
     localStorage.setItem(environment.userKey, JSON.stringify(user));
     this.userSource.next(user);
+
+    this.sharedService.displayExpiringSessionModal =false;
+    this.checkUserIdleTimeout();
 
     // this.user$.subscribe({
     //   next: response =>
     //     console.log(response)
     // });
   }
+
+  private startRefreshTokenTimer(jwt:string){
+    
+    const decodedToken : any = jwtDecode(jwt);
+
+    //expires in seconds
+    const expires = new Date(decodedToken.exp * 1000);
+    //30 seconds before the expirry
+    const timeout = expires.getTime() - Date.now() - (30 * 1000);
+    this.refreshTokenTimeout = setTimeout(this.refreshToken, timeout);
+  }
+
+  private stopRefreshTokenTimer(){
+    clearTimeout(this.refreshTokenTimeout);
+  }
+
 }

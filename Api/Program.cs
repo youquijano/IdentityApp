@@ -68,6 +68,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["JWT:Issuer"],
             ValidateIssuer = true,
             ValidateAudience = false,
+            //validating the expiry token
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
         };
     });
 

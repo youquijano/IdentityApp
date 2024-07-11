@@ -1,4 +1,5 @@
-﻿using Api.DTOs.Account;
+﻿using Api.Data;
+using Api.DTOs.Account;
 using Api.Models;
 using Api.Service;
 using Google.Apis.Auth;
@@ -12,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualBasic;
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Security.Claims;
@@ -28,6 +30,7 @@ namespace Api.Controllers
         private readonly SignInManager<User> signInManager;
         private readonly UserManager<User> userManager;
         private readonly EmailService emailService;
+        private readonly Context context;
         private readonly IConfiguration configuration;
         private readonly HttpClient _facebookHttpClient;
 
@@ -35,12 +38,14 @@ namespace Api.Controllers
             SignInManager<User> signInManager,
             UserManager<User> userManager,
             EmailService emailService,
+            Context context,
             IConfiguration configuration)
         {
             this.jWTService = jWTService;
             this.signInManager = signInManager;
             this.userManager = userManager;
             this.emailService = emailService;
+            this.context = context;
             this.configuration = configuration;
             _facebookHttpClient = new HttpClient
             {
@@ -49,11 +54,28 @@ namespace Api.Controllers
         }
 
         [Authorize]
-        [HttpGet("Refresh-user-token")]
-        public async Task<ActionResult<UserDto>> RefreshUserToken()
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<UserDto>> RefreshToken()
+        {
+            var token = Request.Cookies["IdentityAppRefreshToken"];
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if(IsValidRefreshTokenAsync(userId, token).GetAwaiter().GetResult())
+            {
+                var user = await userManager.FindByIdAsync(userId);
+                if (user == null) return Unauthorized("Invalid or expired token, please try to login");
+                return await CreateApplicationUserDto(user);
+            }
+
+            return Unauthorized("Invalid or expired token, please try to login");
+        }
+
+        [Authorize]
+        [HttpGet("refresh-page")]
+        public async Task<ActionResult<UserDto>> RefreshPage()
         {
             var user = await userManager.FindByNameAsync(User.FindFirst(ClaimTypes.Email)?.Value);
-            if(await userManager.IsLockedOutAsync(user))
+            if (await userManager.IsLockedOutAsync(user))
             {
                 return Unauthorized("You have been locked out");
             }
@@ -382,6 +404,8 @@ namespace Api.Controllers
         #region Private Helper Method
         private async Task<UserDto> CreateApplicationUserDto(User user)
         {
+            await SaveRefreshTokenAsync(user);
+
             return new UserDto
             {
                 FirstName = user.FirstName,
@@ -474,6 +498,48 @@ namespace Api.Controllers
 
             return true;
 
+        }
+
+        private async Task SaveRefreshTokenAsync(User user)
+        {
+            var refreshToken = jWTService.CreateRefreshToken(user);
+            var existingRefreshToken = await context.RefreshTokens.SingleOrDefaultAsync(x => x.UserId == user.Id);
+
+            if (existingRefreshToken != null)
+            {
+                existingRefreshToken.Token = refreshToken.Token;
+                existingRefreshToken.DateCreatedUtc = refreshToken.DateCreatedUtc;
+                existingRefreshToken.DateExpireUtc = refreshToken.DateExpireUtc;
+            }
+            else
+            {
+                user.RefreshTokens.Add(refreshToken);
+            }
+
+            await context.SaveChangesAsync();
+
+            var cookieOptions = new CookieOptions
+            {
+                Expires = refreshToken.DateExpireUtc,
+                IsEssential = true,
+                HttpOnly = true, //cookie will only be availbe on server
+                Secure = true,
+                SameSite = SameSiteMode.None,
+            };
+            
+            Response.Cookies.Append("IdentityAppRefreshToken", refreshToken.Token, cookieOptions);
+            
+            
+        }
+
+        public async Task<bool> IsValidRefreshTokenAsync(string userId, string token)
+        {
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(userId)) return false;
+            var fetchedRefreshToken = await context.RefreshTokens.FirstOrDefaultAsync(x => x.UserId == userId && x.Token == token);
+            if (fetchedRefreshToken == null) return false;
+            if (fetchedRefreshToken.IsExpire) return false;
+
+            return true;
         }
         #endregion
     }
